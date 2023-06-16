@@ -1,0 +1,29 @@
+
+#hidden folders
+.cache
+.config
+.ipynb_checkpoints
+.ipython
+.keras
+.local
+.npm
+
+__pycache__/
+
+*/.jupyter/*
+!*/.jupyter/jupyter_notebook_config.py
+!*/.jupyter/jupyter_server_config.py
+
+
+# docker volumes
+permanent_storage/*
+
+# generic
+notebooks/custom_libraries/generic_helpers/*
+
+.DS_Store
+
+*/.cookiecutter_replay/*
+.bash_history
+
+aux_cmd.command

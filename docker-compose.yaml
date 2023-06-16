@@ -1,0 +1,21 @@
+version: '3'
+services:
+    main-container:
+        ports:
+            - "${HOST_PORT}:${CONTAINER_PORT}"
+            - "${DEBUG_HOST_PORT}:8889"
+        volumes:
+            - "${NOTEBOOK_DIR}:/home/jovyan"
+            - "${PERMANENT_STORAGE}:/home/jovyan/permanent_storage/"
+        # devices:
+        #     - /dev/video0:/dev/video0
+        environment:
+            - 'JUPYTER_RUNTIME_DIR=/tmp'
+            - 'JUPYTER_ENABLE_LAB=yes'
+            - 'GLOBAL_LIBRARIES_PATH=/home/jovyan/custom_libraries/'
+            - 'PMT_STG_PATH=/home/jovyan/permanent_storage/'
+        build:
+            context: .
+            dockerfile: ${dockerfile_src}
+            target: ${dockerfile_target}
+        image: "${registry}/${repositoryName}:${dockerfile_target}_${versionNumber}"
