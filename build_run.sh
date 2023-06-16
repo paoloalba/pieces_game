@@ -11,7 +11,7 @@ export versionNumber=beta
 export dockerfile_src=$1
 export dockerfile_target=$2
 
-export repositoryName=test_ipywidgets
+export repositoryName=four_pieces_game
 
 export PERMANENT_STORAGE=./permanent_storage
 
