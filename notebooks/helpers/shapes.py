@@ -118,7 +118,7 @@ class Shape:
 
     def combine(self, other:Self, gg:Tuple[int], pp:Tuple[int]) -> Self:
         g1 = self.segments[gg[0]]
-        g2 = other.segments[gg[0]]
+        g2 = other.segments[gg[1]]
         pp = (g1.points[pp[0]], g2.points[pp[1]])
         other.translate(pp[0]-pp[1])
         angl = degrees(g2.coeff) - degrees(g1.coeff)
