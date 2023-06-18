@@ -5,7 +5,7 @@ from typing import List, Tuple, Dict, Callable
 from PIL import Image, ImageDraw
 from typing_extensions import Self
 from math import radians, degrees
-
+from copy import deepcopy
 
 @dataclass
 class Point:
@@ -116,13 +116,50 @@ class Shape:
     def overlap(self, other:Self) -> bool:
         raise NotImplementedError()
 
+    @staticmethod
+    def rotate_list(l:List, n:int):
+        return l[n:] + l[:n]
+    
+    def center_point_list(self, center_point:Point):
+        cnt_idx = self.points.index(center_point)
+        self.points = Shape.rotate_list(self.points, cnt_idx)
+        self.__post_init__()
+        nw_dict = {}
+        for kkk, vvv in self.color_dict.items():
+            if kkk+cnt_idx > self.num_points-1:
+                nw_dict[kkk+cnt_idx-self.num_points] = vvv
+            else:
+                nw_dict[kkk+cnt_idx] = vvv
+        self.color_dict = nw_dict
+
     def combine(self, other:Self, gg:Tuple[int], pp:Tuple[int]) -> Self:
         g1 = self.segments[gg[0]]
         g2 = other.segments[gg[1]]
+
         pp = (g1.points[pp[0]], g2.points[pp[1]])
+
+        center_point = pp[0]
+
         other.translate(pp[0]-pp[1])
         angl = degrees(g2.coeff) - degrees(g1.coeff)
-        other.rotate(pp[0], 180-angl)
+        other.rotate(center_point, 180-angl)
+ 
+        nw_points = []
+        nw_points.append(center_point)
+
+        self.center_point_list(center_point)
+        other.center_point_list(center_point)
+
+        l_list = self.points
+        r_list = other.points
+
+        if g1.length > g2.length:
+            nw_points.extend(other.points[::-1][:-1])
+            nw_points.extend(self.points[1:])
+        else:
+            raise Exception()
+        
+        return Shape(nw_points)
 
     def draw(self, im:Image):
         draw = ImageDraw.Draw(im)
