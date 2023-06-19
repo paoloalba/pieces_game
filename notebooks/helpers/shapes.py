@@ -6,6 +6,13 @@ from PIL import Image, ImageDraw
 from typing_extensions import Self
 from math import radians, degrees
 from copy import deepcopy
+from itertools import product
+from IPython.display import display
+from shapely import Polygon, affinity
+from shapely.ops import cascaded_union
+
+class ShapesIntersects(Exception):
+    ...
 
 @dataclass
 class Point:
@@ -78,6 +85,7 @@ class Shape:
     num_points:int = field(init=False)
     white_col:Tuple = field(init=False, default=(255, 255, 255))
     segments:List[Segment] = field(init=False)
+    polygon:Polygon = field(init=False)
 
     def __post_init__(self):
         self.num_points = len(self.points)
@@ -94,17 +102,21 @@ class Shape:
             nw_list.append(Segment(p0,p1))
         self.segments = nw_list
 
+        self.polygon = Polygon([(sss.x, -sss.y) for sss in self.points])
+
     @staticmethod
     def create_empty_img():
-        im = Image.new("RGB", (100, 100), Shape.white_col)
+        im = Image.new("RGB", (500, 500), Shape.white_col)
         return im
 
     #region Transformations
 
     def translate(self, delta:Point):
+        aff_p = affinity.translate(self.polygon, xoff=delta.x, yoff=-delta.y)
         for ppp in self.points:
             ppp.translate(delta)
         self.__post_init__()
+        self.polygon = aff_p
 
     def rotate(self, center:Point, delta:float):
         for ppp in self.points:
@@ -112,9 +124,6 @@ class Shape:
         self.__post_init__()
 
     #endregion
-
-    def overlap(self, other:Self) -> bool:
-        raise NotImplementedError()
 
     @staticmethod
     def rotate_list(l:List, n:int):
@@ -133,31 +142,45 @@ class Shape:
         self.color_dict = nw_dict
 
     def combine(self, other:Self, gg:Tuple[int], pp:Tuple[int]) -> Self:
-        g1 = self.segments[gg[0]]
-        g2 = other.segments[gg[1]]
+
+        s1 = deepcopy(self)
+        s2 = deepcopy(other)
+
+        g1 = s1.segments[gg[0]]
+        g2 = s2.segments[gg[1]]
 
         pp = (g1.points[pp[0]], g2.points[pp[1]])
 
         center_point = pp[0]
+        print(g1,g2,center_point)
 
-        other.translate(pp[0]-pp[1])
+        s2.translate(pp[0]-pp[1])
+        print(g1,g2,center_point)
         angl = degrees(g2.coeff) - degrees(g1.coeff)
-        other.rotate(center_point, 180-angl)
- 
+        print(angl)
+        s2.rotate(center_point, 180-angl)
+        print(g1,g2,center_point)
+
+        if s1.intersects(s2):
+            raise ShapesIntersects("shapes intersect")
+
+        return s1, s2
+
         nw_points = []
         nw_points.append(center_point)
 
-        self.center_point_list(center_point)
-        other.center_point_list(center_point)
+        s1.center_point_list(center_point)
+        s2.center_point_list(center_point)
 
-        l_list = self.points
-        r_list = other.points
+        l_list = s1.points
+        r_list = s2.points
 
         if g1.length > g2.length:
-            nw_points.extend(other.points[::-1][:-1])
-            nw_points.extend(self.points[1:])
+            nw_points.extend(s2.points[::-1][:-1])
+            nw_points.extend(s1.points[1:])
         else:
-            raise Exception()
+            nw_points.extend(s1.points[::-1][:-1])
+            nw_points.extend(s2.points[1:])
         
         return Shape(nw_points)
 
@@ -166,3 +189,43 @@ class Shape:
 
         for idx, sss in enumerate(self.segments):
             draw.line(sss.to_tuple(), fill=self.color_dict.get(idx, "black"))
+
+    def intersects(self, other:Self) -> bool:
+        return self.polygon.overlaps(other.polygon)
+
+    def calculate_centroid(self):
+        return Point(np.mean([ppp.x for ppp in self.points]), np.mean([ppp.y for ppp in self.points]))
+
+    @staticmethod
+    def show_all(shape_list:List[Self]):
+        im = Shape.create_empty_img()
+        for sss in shape_list:
+            sss.draw(im)
+        display(im)
+
+    def show(self):
+        im = Shape.create_empty_img()
+        self.draw(im)
+        display(im)
+
+    def center(self, center_point:Point):
+        self.translate(center_point-self.calculate_centroid())
+
+    def is_t_shape(self):
+        True
+    
+    def get_all_combinations(self, other:Self):
+        cmb_l = []
+
+        for sss, ppp in product(product(range(self.num_points), range(other.num_points)), product(range(2), range(2))):
+            try:
+                cmb_l.append(self.combine(other, sss, ppp))
+            except ShapesIntersects:
+                print("Intersection", sss, ppp)
+            except Exception as excp:
+                print(sss, ppp)
+                raise excp
+        
+        return cmb_l
+
+

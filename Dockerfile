@@ -1,6 +1,7 @@
 FROM jupyter/scipy-notebook:python-3.10.8 as base
 
 RUN pip install nb_black
+RUN pip install shapely
 
 FROM base as debug
 RUN pip install debugpy
